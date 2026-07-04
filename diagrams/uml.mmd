@@ -1,15 +1,63 @@
 classDiagram
-    %% Replace the placeholders below with your actual classes, attributes, methods, and relationships.
-    %% Keep this file updated so it matches your final implementation.
+    %% Draft UML based on brainstormed attributes/methods from reflection.md
+    %% Update as implementation solidifies.
 
-    class ClassName {
-        +type attribute
-        +method() returnType
+    class Owner {
+        +str name
+        +list~Pet~ pets
+        +time pickup_time
+        +float total_cost
+        +addPet(pet) None
+        +getPickupTime() time
+        +getTotalCost() float
     }
 
-    class AnotherClass {
-        +type attribute
-        +method() returnType
+    class Pet {
+        +str name
+        +str breed
+        +str species
+        +list~Task~ tasks
+        +addTask(task) None
+        +getTasks() list~Task~
     }
 
-    ClassName --> AnotherClass : relationship
+    class Task {
+        +str title
+        +int duration_minutes
+        +str priority
+        +bool time_sensitive
+        +bool completed
+        +markCompleted() None
+        +getEffortLevel() int
+    }
+
+    class Employee {
+        +str name
+        +list~Assignment~ assignments
+        +assignTask(assignment) None
+        +getAssignments() list~Assignment~
+    }
+
+    class Assignment {
+        +Employee employee
+        +Pet pet
+        +Task task
+        +time start_time
+        +time end_time
+        +getDuration() int
+    }
+
+    class Schedule {
+        +date day
+        +list~Assignment~ assignments
+        +addAssignment(assignment) None
+        +generatePlan() list~Assignment~
+        +explainPlan() str
+    }
+
+    Owner "1" --> "many" Pet : owns
+    Pet "1" --> "many" Task : requires
+    Employee "1" --> "many" Assignment : performs
+    Assignment "many" --> "1" Pet : for
+    Assignment "many" --> "1" Task : covers
+    Schedule "1" --> "many" Assignment : orders
