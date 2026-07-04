@@ -52,6 +52,21 @@ Paste a sample of your app's CLI or Streamlit output here so a reader can see wh
 #   08:00 — Morning walk (30 min) [priority: high]
 #   09:00 — Feeding (10 min) [priority: high]
 #   ...
+
+
+
+Today's Schedule
+========================================
+08:00 - Morning walk for Mochi (high priority) -> Alice
+08:00 - Feeding for Mochi (high priority) -> Bob
+08:10 - Litter box cleaning for Biscuit (medium priority) -> Bob
+
+Assignment Details
+========================================
+Morning walk | Mochi | Alice | 08:00-08:30 (30 min)
+Feeding | Mochi | Bob | 08:00-08:10 (10 min)
+Litter box cleaning | Biscuit | Bob | 08:10-08:25 (15 min)
+
 ```
 
 ## 🧪 Testing PawPal+
@@ -74,12 +89,12 @@ Sample test output:
 
 > Fill in once you've implemented scheduling logic.
 
-| Feature | Method(s) | Notes |
-|---------|-----------|-------|
-| Task sorting | | e.g., by priority, duration |
-| Filtering | | e.g., skip tasks if time runs out |
-| Conflict handling | | e.g., overlapping time slots |
-| Recurring tasks | | e.g., daily vs. weekly |
+| Feature           | Method(s) | Notes                             |
+| ----------------- | --------- | --------------------------------- |
+| Task sorting      |           | e.g., by priority, duration       |
+| Filtering         |           | e.g., skip tasks if time runs out |
+| Conflict handling |           | e.g., overlapping time slots      |
+| Recurring tasks   |           | e.g., daily vs. weekly            |
 
 ## 📸 Demo Walkthrough
 
@@ -91,4 +106,4 @@ Describe your app in numbered steps so a reader can follow along without watchin
 4. <!-- Describe this step -->
 5. <!-- Add more steps as needed -->
 
-**Screenshot or video** *(optional)*: <!-- Insert a screenshot or link to a demo video here -->
+**Screenshot or video** _(optional)_: <!-- Insert a screenshot or link to a demo video here -->

@@ -3,6 +3,7 @@ classDiagram
     %% Update as implementation solidifies.
 
     class Owner {
+        +str id
         +str name
         +list~Pet~ pets
         +time pickup_time
@@ -10,21 +11,26 @@ classDiagram
         +addPet(pet) None
         +getPickupTime() time
         +getTotalCost() float
+        +getAllTasks() list~tuple~
     }
 
     class Pet {
+        +str id
         +str name
         +str breed
         +str species
         +list~Task~ tasks
         +addTask(task) None
         +getTasks() list~Task~
+        +getPendingTasks() list~Task~
     }
 
     class Task {
+        +str id
         +str title
         +int duration_minutes
         +str priority
+        +str frequency
         +bool time_sensitive
         +bool completed
         +markCompleted() None
@@ -32,6 +38,7 @@ classDiagram
     }
 
     class Employee {
+        +str id
         +str name
         +list~Assignment~ assignments
         +assignTask(assignment) None
@@ -49,10 +56,19 @@ classDiagram
 
     class Schedule {
         +date day
+        +Owner owner
+        +list~Employee~ available_employees
         +list~Assignment~ assignments
         +addAssignment(assignment) None
-        +generatePlan() list~Assignment~
-        +explainPlan() str
+    }
+
+    class Scheduler {
+        +Owner owner
+        +list~Employee~ employees
+        +getPendingTasks() list~tuple~
+        +prioritizeTasks(pending) list~tuple~
+        +buildSchedule(day, start_time) Schedule
+        +explainSchedule(schedule) str
     }
 
     Owner "1" --> "many" Pet : owns
@@ -60,4 +76,10 @@ classDiagram
     Employee "1" --> "many" Assignment : performs
     Assignment "many" --> "1" Pet : for
     Assignment "many" --> "1" Task : covers
+    Schedule "1" --> "1" Owner : plans for
+    Schedule "1" --> "many" Employee : draws from
     Schedule "1" --> "many" Assignment : orders
+    Scheduler "1" --> "1" Owner : reads
+    Scheduler "1" --> "many" Employee : allocates
+    Scheduler ..> Schedule : builds
+    Scheduler ..> Assignment : creates
