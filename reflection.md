@@ -51,6 +51,9 @@
 
 - Describe one tradeoff your scheduler makes.
   - I think there will be some issues with priority, specifically jumping around tasks from one pet to another. Since the services are based off of priority and time sensitivity, there might be gaps in between servicing each pet. (Revised my plan at this point to have an employee list, and possibly a separate table Assignment, for which employee is assigned to do the task for an animal.)
+
+- in our build_schedule method, there is an inefficiency with how it handles the sorting of the schedule. It does a Swap for the next_available employee/available_time which is an O(mn) operation.
+- This is an acceptable trade off for now since the data we are working with is very small to the point where the app will not crash despite the greedy logic.
 - Why is that tradeoff reasonable for this scenario?
   - I'm basing this off of efficiency of the workflow so that there is little to no conflict when it comes to forgetting to do a specific task. Having a priority/time sensitive ordered schedule will make sure that the most important tasks are done, then the menial task will be done last, with the cost of the menial task to be always done less (This will mean that if an owner were to come in with just 1 menial services to do for the dog, it will have to be done after all the priority tasks are done or if their pickup time is coming up.)
 

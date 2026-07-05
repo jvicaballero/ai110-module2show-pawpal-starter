@@ -87,14 +87,12 @@ Sample test output:
 
 ## 📐 Smarter Scheduling
 
-> Fill in once you've implemented scheduling logic.
-
-| Feature           | Method(s) | Notes                             |
-| ----------------- | --------- | --------------------------------- |
-| Task sorting      |           | e.g., by priority, duration       |
-| Filtering         |           | e.g., skip tasks if time runs out |
-| Conflict handling |           | e.g., overlapping time slots      |
-| Recurring tasks   |           | e.g., daily vs. weekly            |
+| Feature           | Method(s)                                          | Notes                                                                                                                     |
+| ------------------ | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Task sorting      | `Scheduler.sort_by_time()`, `Scheduler.prioritize_tasks()` | `sort_by_time()` orders `(pet, task)` pairs by `Task.preferred_time` ("HH:MM" strings sort correctly without parsing since they're zero-padded); untimed tasks sort last. `prioritize_tasks()` orders tasks time-sensitive first, then by priority weight (high > medium > low), and feeds the result into `build_schedule()`. |
+| Filtering         | `Scheduler.filter_tasks()`                         | Filters `(pet, task)` pairs by completion status (`completed=True/False`) and/or pet name (`pet_name="Mochi"`). Both filters are optional and combine with AND when both are given. |
+| Conflict handling | `Scheduler.find_conflicts()`, `Scheduler.check_conflicts()`, `Scheduler._times_overlap()` | `find_conflicts()` scans a built `Schedule` for assignment pairs that overlap in time **and** are actually impossible to carry out — same pet double-booked, or same employee double-booked. (Two different pets handled by two different employees at the same time is fine and isn't flagged.) `check_conflicts()` wraps this into a plain warning string ("No scheduling conflicts detected." or a bulleted list) so callers never need a try/except. |
+| Recurring tasks   | `Task.next_occurrence()`, `Pet.complete_task()`    | `Task.next_occurrence()` returns a fresh, incomplete copy of a `"daily"` or `"weekly"` task with `due_date` advanced by 1 or 7 days (returns `None` for `"once"`). `Pet.complete_task()` is the orchestration point: it marks the task complete and, if it recurs, appends the new occurrence to the pet's task list automatically. |
 
 ## 📸 Demo Walkthrough
 

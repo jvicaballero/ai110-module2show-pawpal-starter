@@ -20,7 +20,11 @@ class Task:
     frequency: str = "once"  # e.g. "once", "daily", "weekly"
     time_sensitive: bool = False
     completed: bool = False
+    preferred_time: str | None = None  # "HH:MM", zero-padded 24h
+    due_date: date | None = None
     id: str = field(default_factory=_new_id)
+
+    _RECURRENCE_STEP = {"daily": timedelta(days=1), "weekly": timedelta(weeks=1)}
 
     def mark_completed(self) -> None:
         """Flip this task's status to completed."""
@@ -30,6 +34,28 @@ class Task:
         """Score effort as duration weighted by priority."""
         weight = _PRIORITY_WEIGHT.get(self.priority, 1)
         return self.duration_minutes * weight
+
+    def next_occurrence(self) -> "Task | None":
+        """Generate the next instance of a recurring task.
+
+        Copies this task's fields into a brand-new, incomplete Task and advances
+        due_date by one day ("daily") or seven days ("weekly").
+
+        Returns:
+            A new Task, or None if frequency is "once" (or unrecognized).
+        """
+        step = self._RECURRENCE_STEP.get(self.frequency)
+        if step is None:
+            return None
+        return Task(
+            title=self.title,
+            duration_minutes=self.duration_minutes,
+            priority=self.priority,
+            frequency=self.frequency,
+            time_sensitive=self.time_sensitive,
+            preferred_time=self.preferred_time,
+            due_date=self.due_date + step if self.due_date else None,
+        )
 
 
 @dataclass
@@ -51,6 +77,25 @@ class Pet:
     def get_pending_tasks(self) -> list[Task]:
         """Return tasks that are not yet completed."""
         return [task for task in self.tasks if not task.completed]
+
+    def complete_task(self, task: Task) -> Task | None:
+        """Mark a task completed and roll it forward if it recurs.
+
+        Lives on Pet rather than Task because spawning the next occurrence
+        requires appending to this pet's task list, which Task has no reference to.
+
+        Args:
+            task: a task belonging to this pet (must already be in self.tasks
+                to be picked up by future get_pending_tasks() calls).
+
+        Returns:
+            The newly created next-occurrence Task, or None if the task doesn't recur.
+        """
+        task.mark_completed()
+        next_task = task.next_occurrence()
+        if next_task is not None:
+            self.add_task(next_task)
+        return next_task
 
 
 @dataclass
@@ -147,7 +192,15 @@ class Scheduler:
     def prioritize_tasks(
         self, pending: list[tuple[Pet, Task]]
     ) -> list[tuple[Pet, Task]]:
-        """Sort pending tasks: time-sensitive first, then by priority weight."""
+        """Order pending tasks for scheduling: time-sensitive tasks first, then by priority weight.
+
+        Args:
+            pending: (pet, task) pairs to order, e.g. from get_pending_tasks().
+
+        Returns:
+            A new list sorted with time_sensitive=True tasks first, ties broken by
+            descending priority weight (high > medium > low). O(n log n).
+        """
         return sorted(
             pending,
             key=lambda pair: (
@@ -156,8 +209,65 @@ class Scheduler:
             ),
         )
 
+    def filter_tasks(
+        self,
+        completed: bool | None = None,
+        pet_name: str | None = None,
+    ) -> list[tuple[Pet, Task]]:
+        """Filter every (pet, task) pair by completion status and/or pet name.
+
+        Args:
+            completed: keep only tasks with this completed value; None means no filter.
+            pet_name: keep only tasks belonging to the pet with this name; None means no filter.
+
+        Returns:
+            The (pet, task) pairs matching all filters given (an AND of whichever are set).
+        """
+        pairs = self.owner.get_all_tasks()
+        if completed is not None:
+            pairs = [pair for pair in pairs if pair[1].completed == completed]
+        if pet_name is not None:
+            pairs = [pair for pair in pairs if pair[0].name == pet_name]
+        return pairs
+
+    def sort_by_time(
+        self, pending: list[tuple[Pet, Task]]
+    ) -> list[tuple[Pet, Task]]:
+        """Sort pending tasks by their preferred_time.
+
+        "HH:MM" strings are zero-padded, so plain lexicographic sort order matches
+        chronological order without parsing into datetime.time.
+
+        Args:
+            pending: (pet, task) pairs to order.
+
+        Returns:
+            A new list ordered earliest-preferred_time first; tasks with no
+            preferred_time sort last.
+        """
+        return sorted(
+            pending,
+            key=lambda pair: pair[1].preferred_time or "99:99",
+        )
+
     def build_schedule(self, day: date, start_time: time) -> Schedule:
-        """Greedily assign prioritized tasks to whichever employee is free soonest."""
+        """Build a day's schedule using a greedy earliest-available-employee algorithm.
+
+        Tasks are taken in prioritize_tasks() order; each is handed to whichever
+        employee's clock is currently earliest, then that employee's clock advances
+        by the task's duration. This only prevents double-booking an employee — it
+        does not check whether the same pet ends up double-booked; use
+        find_conflicts()/check_conflicts() on the result for that. O(n * m) for
+        n tasks and m employees (a scan over employees per task).
+
+        Args:
+            day: the calendar day being scheduled.
+            start_time: the time every employee's clock starts at.
+
+        Returns:
+            A Schedule with one Assignment per pending task, or an empty Schedule
+            if there are no employees.
+        """
         schedule = Schedule(day=day, owner=self.owner, available_employees=list(self.employees))
         if not self.employees:
             return schedule
@@ -183,6 +293,80 @@ class Scheduler:
             next_available[employee.id] = end_clock
 
         return schedule
+
+    @staticmethod
+    def _times_overlap(start_a: time, end_a: time, start_b: time, end_b: time) -> bool:
+        """Check whether two half-open time intervals [start_a, end_a) and [start_b, end_b) overlap.
+
+        Returns:
+            True if the intervals share any time, False otherwise.
+        """
+        return start_a < end_b and start_b < end_a
+
+    def find_conflicts(self, schedule: Schedule) -> list[dict]:
+        """Detect overlapping assignments that are actually impossible to carry out.
+
+        Checks every pair of assignments (O(n^2) in the number of assignments) and
+        flags a pair only when the overlap is a genuine impossibility: the same pet
+        double-booked, or the same employee double-booked. Two different pets
+        overlapping under two different employees is fine and is not flagged.
+
+        Args:
+            schedule: the built Schedule to inspect.
+
+        Returns:
+            A list of dicts, one per conflicting pair, each with keys "same_pet"
+            (bool), "same_employee" (bool), and "assignments" (the two Assignment
+            objects involved).
+        """
+        conflicts = []
+        assignments = schedule.assignments
+        for i, first in enumerate(assignments):
+            for second in assignments[i + 1:]:
+                same_pet = first.pet.id == second.pet.id
+                same_employee = first.employee.id == second.employee.id
+                if not (same_pet or same_employee):
+                    continue
+                if not self._times_overlap(
+                    first.start_time, first.end_time, second.start_time, second.end_time
+                ):
+                    continue
+                conflicts.append(
+                    {
+                        "same_pet": same_pet,
+                        "same_employee": same_employee,
+                        "assignments": (first, second),
+                    }
+                )
+        return conflicts
+
+    def check_conflicts(self, schedule: Schedule) -> str:
+        """Run find_conflicts() and render the result as a human-readable message.
+
+        Always returns a string rather than raising, so callers can display it
+        as a warning without needing a try/except.
+
+        Args:
+            schedule: the built Schedule to inspect.
+
+        Returns:
+            "No scheduling conflicts detected." if there are none, otherwise a
+            multi-line warning listing each conflicting pair and why.
+        """
+        conflicts = self.find_conflicts(schedule)
+        if not conflicts:
+            return "No scheduling conflicts detected."
+
+        lines = ["Warning: scheduling conflicts detected:"]
+        for conflict in conflicts:
+            first, second = conflict["assignments"]
+            reason = "same pet" if conflict["same_pet"] else "same employee"
+            lines.append(
+                f"  - '{first.task.title}' ({first.pet.name}, {first.employee.name}) "
+                f"overlaps '{second.task.title}' ({second.pet.name}, {second.employee.name}) "
+                f"[{reason}]"
+            )
+        return "\n".join(lines)
 
     def explain_schedule(self, schedule: Schedule) -> str:
         """Render a human-readable summary of a schedule's assignments."""

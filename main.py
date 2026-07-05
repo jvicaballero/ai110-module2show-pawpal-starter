@@ -9,11 +9,22 @@ def main() -> None:
     owner = Owner(name="Jordan")
 
     mochi = Pet(name="Mochi", breed="Shiba Inu", species="dog")
-    mochi.add_task(Task(title="Morning walk", duration_minutes=30, priority="high", time_sensitive=True))
-    mochi.add_task(Task(title="Feeding", duration_minutes=10, priority="high"))
+    mochi.add_task(
+        Task(
+            title="Evening walk",
+            duration_minutes=30,
+            priority="high",
+            time_sensitive=True,
+            preferred_time="18:00",
+        )
+    )
+    mochi.add_task(Task(title="Morning walk", duration_minutes=30, priority="high", preferred_time="07:00"))
+    feeding = Task(title="Feeding", duration_minutes=10, priority="high", preferred_time="12:30")
+    feeding.mark_completed()
+    mochi.add_task(feeding)
 
     biscuit = Pet(name="Biscuit", breed="Tabby", species="cat")
-    biscuit.add_task(Task(title="Litter box cleaning", duration_minutes=15, priority="medium"))
+    biscuit.add_task(Task(title="Litter box cleaning", duration_minutes=15, priority="medium", preferred_time="09:00"))
 
     owner.add_pet(mochi)
     owner.add_pet(biscuit)
@@ -45,6 +56,30 @@ def main() -> None:
     for employee in employees:
         total_minutes = sum(a.get_duration() for a in employee.get_assignments())
         print(f"{employee.name}: {len(employee.get_assignments())} task(s), {total_minutes} min total")
+
+    print()
+    print("Tasks Sorted by Preferred Time")
+    print("=" * 40)
+    all_tasks = owner.get_all_tasks()
+    for pet, task in scheduler.sort_by_time(all_tasks):
+        print(f"{task.preferred_time or '--:--'} | {task.title} ({pet.name})")
+
+    print()
+    print("Pending Tasks (filter by completion status)")
+    print("=" * 40)
+    for pet, task in scheduler.filter_tasks(completed=False):
+        print(f"{task.title} ({pet.name})")
+
+    print()
+    print("Mochi's Tasks (filter by pet name)")
+    print("=" * 40)
+    for pet, task in scheduler.filter_tasks(pet_name="Mochi"):
+        print(f"{task.title} | completed={task.completed}")
+
+    print()
+    print("Conflict Check")
+    print("=" * 40)
+    print(scheduler.check_conflicts(todays_plan))
 
 
 if __name__ == "__main__":
