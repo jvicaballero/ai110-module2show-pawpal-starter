@@ -72,7 +72,7 @@ Litter box cleaning | Biscuit | Bob | 08:10-08:25 (15 min)
 ## 🧪 Testing PawPal+
 
 ```bash
-python -m pytest
+python -m pytest -v
 ```
 
 The suite in `tests/test_pawpal.py` covers:
@@ -87,12 +87,22 @@ Sample test output:
 
 ```
 ============================= test session starts =============================
-platform win32 -- Python 3.13.7, pytest-9.0.3, pluggy-1.6.0
-rootdir: D:\codepathprojectsfin\ai110-module2show-pawpal-starter
+platform win32 -- Python 3.13.7, pytest-9.0.3, pluggy-1.6.0 -- C:\Users\jvica\AppData\Local\Programs\Python\Python313\python.exe
+cachedir: .pytest_cache
+rootdir: d:\codepathprojectsfin\ai110-module2show-pawpal-starter
 plugins: anyio-4.13.0
-collected 10 items
+collecting ... collected 10 items
 
-tests\test_pawpal.py ..........                                          [100%]
+tests/test_pawpal.py::test_task_completion_updates_status PASSED         [ 10%]
+tests/test_pawpal.py::test_adding_task_increases_pet_task_count PASSED   [ 20%]
+tests/test_pawpal.py::test_creating_assignment_registers_with_employee PASSED [ 30%]
+tests/test_pawpal.py::test_reassigning_moves_assignment_between_employees PASSED [ 40%]
+tests/test_pawpal.py::test_sort_by_time_orders_earliest_first_and_untimed_last PASSED [ 50%]
+tests/test_pawpal.py::test_filter_tasks_by_completion_status_and_pet_name PASSED [ 60%]
+tests/test_pawpal.py::test_find_conflicts_flags_same_pet_double_booking PASSED [ 70%]
+tests/test_pawpal.py::test_check_conflicts_reports_clean_schedule PASSED [ 80%]
+tests/test_pawpal.py::test_completing_daily_task_creates_next_occurrence PASSED [ 90%]
+tests/test_pawpal.py::test_completing_once_task_creates_no_next_occurrence PASSED [100%]
 
 ============================= 10 passed in 0.04s ==============================
 ```
