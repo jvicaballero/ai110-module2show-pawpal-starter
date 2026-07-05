@@ -72,18 +72,32 @@ Litter box cleaning | Biscuit | Bob | 08:10-08:25 (15 min)
 ## 🧪 Testing PawPal+
 
 ```bash
-# Run the full test suite:
-pytest
-
-# Run with coverage:
-pytest --cov
+python -m pytest
 ```
+
+The suite in `tests/test_pawpal.py` covers:
+
+- **Core model behavior** — marking a task completed, adding a task to a pet, an `Assignment` registering itself with its `Employee`, and reassigning an `Assignment` between employees.
+- **Sorting** — `sort_by_time()` orders tasks earliest-preferred-time-first and pushes untimed tasks to the end.
+- **Filtering** — `filter_tasks()` correctly narrows by completion status, by pet name, and by both combined.
+- **Conflict detection** — `find_conflicts()`/`check_conflicts()` catch a same-pet double-booking produced by `build_schedule()`, and report a clean schedule with no false positives.
+- **Recurring tasks** — completing a `"daily"` task via `Pet.complete_task()` spawns a new incomplete occurrence with `due_date` advanced by one day, while completing a `"once"` task spawns nothing.
 
 Sample test output:
 
 ```
-# Paste your pytest output here
+============================= test session starts =============================
+platform win32 -- Python 3.13.7, pytest-9.0.3, pluggy-1.6.0
+rootdir: D:\codepathprojectsfin\ai110-module2show-pawpal-starter
+plugins: anyio-4.13.0
+collected 10 items
+
+tests\test_pawpal.py ..........                                          [100%]
+
+============================= 10 passed in 0.04s ==============================
 ```
+
+**Confidence Level:** ⭐⭐⭐⭐☆ (4/5) — the core scheduling logic (sorting, filtering, conflict detection, recurrence) is well covered and passing, but `build_schedule()`'s greedy assignment algorithm itself and edge cases like zero employees, weekly recurrence, and multi-owner scenarios don't yet have dedicated tests, so a 5th star awaits broader coverage.
 
 ## 📐 Smarter Scheduling
 
