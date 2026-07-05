@@ -52,6 +52,8 @@ if not owner.pets:
 
 st.write("Current pets:", ", ".join(pet.name for pet in owner.pets))
 
+scheduler = Scheduler(owner=owner, employees=st.session_state.employees)
+
 st.divider()
 
 st.subheader("Add a Task")
@@ -67,6 +69,11 @@ with st.form("add_task_form", clear_on_submit=True):
         duration = st.number_input("Duration (minutes)", min_value=1, max_value=240, value=20)
     with col3:
         priority = st.selectbox("Priority", ["low", "medium", "high"], index=2)
+    col4, col5 = st.columns(2)
+    with col4:
+        preferred_time = st.time_input("Preferred time (optional)", value=None)
+    with col5:
+        frequency = st.selectbox("Frequency", ["once", "daily", "weekly"])
     time_sensitive = st.checkbox("Time sensitive?")
     task_submitted = st.form_submit_button("Add task")
 
@@ -77,34 +84,73 @@ if task_submitted and task_title:
             duration_minutes=int(duration),
             priority=priority,
             time_sensitive=time_sensitive,
+            frequency=frequency,
+            preferred_time=preferred_time.strftime("%H:%M") if preferred_time else None,
         )
     )
     st.success(f"Added '{task_title}' to {selected_pet.name}.")
 
-if selected_pet.get_tasks():
-    st.write(f"Tasks for {selected_pet.name}:")
+st.divider()
+
+st.subheader("Tasks")
+filter_col1, filter_col2 = st.columns(2)
+with filter_col1:
+    pet_filter = st.selectbox("Filter by pet", ["All pets"] + pet_names)
+with filter_col2:
+    status_filter = st.selectbox("Filter by status", ["All", "Pending", "Completed"])
+
+filtered = scheduler.filter_tasks(
+    completed=(status_filter == "Completed") if status_filter != "All" else None,
+    pet_name=None if pet_filter == "All pets" else pet_filter,
+)
+sorted_tasks = scheduler.sort_by_time(filtered)
+
+if sorted_tasks:
     st.table(
         [
             {
+                "preferred_time": task.preferred_time or "--:--",
                 "title": task.title,
+                "pet": pet.name,
                 "duration_minutes": task.duration_minutes,
                 "priority": task.priority,
-                "time_sensitive": task.time_sensitive,
+                "frequency": task.frequency,
                 "completed": task.completed,
             }
-            for task in selected_pet.get_tasks()
+            for pet, task in sorted_tasks
         ]
     )
 else:
-    st.info(f"No tasks yet for {selected_pet.name}.")
+    st.info("No tasks match the selected filters.")
 
 st.divider()
 
 st.subheader("Build Schedule")
 if st.button("Generate schedule"):
-    scheduler = Scheduler(owner=owner, employees=st.session_state.employees)
-    schedule = scheduler.build_schedule(day=date.today(), start_time=time(8, 0))
-    st.session_state.schedule_explanation = scheduler.explain_schedule(schedule)
+    st.session_state.schedule = scheduler.build_schedule(day=date.today(), start_time=time(8, 0))
 
-if "schedule_explanation" in st.session_state:
-    st.code(st.session_state.schedule_explanation)
+if "schedule" in st.session_state:
+    schedule = st.session_state.schedule
+
+    if schedule.assignments:
+        st.table(
+            [
+                {
+                    "start": assignment.start_time.strftime("%H:%M"),
+                    "end": assignment.end_time.strftime("%H:%M"),
+                    "task": assignment.task.title,
+                    "pet": assignment.pet.name,
+                    "priority": assignment.task.priority,
+                    "employee": assignment.employee.name,
+                }
+                for assignment in schedule.assignments
+            ]
+        )
+    else:
+        st.info("No tasks scheduled.")
+
+    conflicts = scheduler.find_conflicts(schedule)
+    if conflicts:
+        st.warning(scheduler.check_conflicts(schedule))
+    else:
+        st.success(scheduler.check_conflicts(schedule))

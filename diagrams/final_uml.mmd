@@ -1,0 +1,94 @@
+classDiagram
+    %% Reflects the implemented pawpal_system.py as of the smarter-scheduling work
+    %% (sorting, filtering, conflict detection, recurring tasks).
+
+    class Owner {
+        +str id
+        +str name
+        +list~Pet~ pets
+        +time pickup_time
+        +float total_cost
+        +addPet(pet) None
+        +getPickupTime() time
+        +getTotalCost() float
+        +getAllTasks() list~tuple~
+    }
+
+    class Pet {
+        +str id
+        +str name
+        +str breed
+        +str species
+        +list~Task~ tasks
+        +addTask(task) None
+        +getTasks() list~Task~
+        +getPendingTasks() list~Task~
+        +completeTask(task) Task
+    }
+
+    class Task {
+        +str id
+        +str title
+        +int duration_minutes
+        +str priority
+        +str frequency
+        +bool time_sensitive
+        +bool completed
+        +str preferred_time
+        +date due_date
+        +markCompleted() None
+        +getEffortLevel() int
+        +nextOccurrence() Task
+    }
+
+    class Employee {
+        +str id
+        +str name
+        +list~Assignment~ assignments
+        +assignTask(assignment) None
+        +getAssignments() list~Assignment~
+    }
+
+    class Assignment {
+        +Employee employee
+        +Pet pet
+        +Task task
+        +time start_time
+        +time end_time
+        +getDuration() int
+    }
+
+    class Schedule {
+        +date day
+        +Owner owner
+        +list~Employee~ available_employees
+        +list~Assignment~ assignments
+        +addAssignment(assignment) None
+    }
+
+    class Scheduler {
+        +Owner owner
+        +list~Employee~ employees
+        +getPendingTasks() list~tuple~
+        +prioritizeTasks(pending) list~tuple~
+        +filterTasks(completed, pet_name) list~tuple~
+        +sortByTime(pending) list~tuple~
+        +buildSchedule(day, start_time) Schedule
+        +findConflicts(schedule) list~dict~
+        +checkConflicts(schedule) str
+        +explainSchedule(schedule) str
+    }
+
+    Owner "1" --> "many" Pet : owns
+    Pet "1" --> "many" Task : requires
+    Pet ..> Task : creates (recurrence)
+    Employee "1" --> "many" Assignment : performs
+    Assignment "many" --> "1" Pet : for
+    Assignment "many" --> "1" Task : covers
+    Schedule "1" --> "1" Owner : plans for
+    Schedule "1" --> "many" Employee : draws from
+    Schedule "1" --> "many" Assignment : orders
+    Scheduler "1" --> "1" Owner : reads
+    Scheduler "1" --> "many" Employee : allocates
+    Scheduler ..> Schedule : builds
+    Scheduler ..> Assignment : creates

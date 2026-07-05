@@ -109,6 +109,14 @@ tests/test_pawpal.py::test_completing_once_task_creates_no_next_occurrence PASSE
 
 **Confidence Level:** ⭐⭐⭐⭐☆ (4/5) — the core scheduling logic (sorting, filtering, conflict detection, recurrence) is well covered and passing, but `build_schedule()`'s greedy assignment algorithm itself and edge cases like zero employees, weekly recurrence, and multi-owner scenarios don't yet have dedicated tests, so a 5th star awaits broader coverage.
 
+## ✨ Features
+
+- **Priority-aware ordering** — time-sensitive tasks are scheduled first, then ranked by priority weight (high > medium > low), so urgent care never gets bumped by something lower-stakes.
+- **Sorting by time** — tasks line up chronologically by their preferred "HH:MM" time; tasks with no preferred time sort to the end instead of cluttering the top.
+- **Filtering by pet or status** — narrow the task list down to a single pet, or to just pending/completed tasks, without writing a new query each time.
+- **Conflict warnings** — after a schedule is built, it's checked for double-bookings (the same pet or the same employee assigned to overlapping tasks) and a plain-language warning is surfaced instead of silently producing a broken plan.
+- **Daily/weekly recurrence** — marking a recurring task complete automatically creates its next occurrence, with the due date rolled forward, so daily walks and weekly groomings never have to be re-entered by hand.
+
 ## 📐 Smarter Scheduling
 
 | Feature           | Method(s)                                          | Notes                                                                                                                     |
@@ -120,12 +128,78 @@ tests/test_pawpal.py::test_completing_once_task_creates_no_next_occurrence PASSE
 
 ## 📸 Demo Walkthrough
 
-Describe your app in numbered steps so a reader can follow along without watching a video:
+### UI features
 
-1. <!-- Describe this step -->
-2. <!-- Describe this step -->
-3. <!-- Describe this step -->
-4. <!-- Describe this step -->
-5. <!-- Add more steps as needed -->
+The Streamlit app (`app.py`) lets a user:
+
+- Set the **owner's name** and add one or more **pets** (name, breed, species).
+- Add **care tasks** to a selected pet — title, duration, priority, an optional preferred time, an optional recurrence (`once`/`daily`/`weekly`), and whether it's time-sensitive.
+- **Filter and view tasks** by pet and by completion status, sorted chronologically by preferred time.
+- **Generate a daily schedule** with one click, which assigns every pending task to a staff member and displays the resulting timeline as a table.
+- See a **conflict warning or success banner** immediately below the schedule, so a double-booked pet or employee is impossible to miss.
+
+### Example workflow
+
+1. Add an owner (e.g. "Jordan") and a pet (e.g. "Mochi").
+2. Add a couple of care tasks for Mochi — say, a high-priority "Morning walk" at `07:00` and a "Grooming" session, both time-sensitive.
+3. Open the **Tasks** section to see them sorted by preferred time and filtered by pet/status.
+4. Click **Generate schedule** to build today's plan — the app assigns each task to whichever employee (e.g. Alice or Bob) is free soonest.
+5. Review the schedule table and the warning/success banner underneath it before finalizing the day's plan.
+
+### Key Scheduler behaviors shown
+
+- **Sorting** — `Scheduler.sort_by_time()` orders tasks chronologically by preferred time; `Scheduler.prioritize_tasks()` puts time-sensitive, high-priority tasks first when the schedule is actually built.
+- **Filtering** — `Scheduler.filter_tasks()` narrows the task list by pet name and/or completion status.
+- **Conflict warnings** — `Scheduler.find_conflicts()` / `Scheduler.check_conflicts()` detect when the greedy scheduler has double-booked a pet (two employees assigned to the same pet at overlapping times) or an employee, and surface it as a warning rather than failing silently.
+- **Recurrence** — completing a `"daily"` or `"weekly"` task via `Pet.complete_task()` automatically creates its next occurrence.
+
+### Sample CLI output (`python main.py`)
+
+`main.py` exercises the same Scheduler methods outside the UI — useful for quickly checking behavior from the terminal:
+
+```
+Today's Schedule
+========================================
+08:00 - Evening walk for Mochi (high priority) -> Alice
+08:00 - Morning walk for Mochi (high priority) -> Bob
+08:30 - Litter box cleaning for Biscuit (medium priority) -> Alice
+
+Assignment Details
+========================================
+Evening walk | Mochi | Alice | 08:00-08:30 (30 min)
+Morning walk | Mochi | Bob | 08:00-08:30 (30 min)
+Litter box cleaning | Biscuit | Alice | 08:30-08:45 (15 min)
+
+Employee Workload
+========================================
+Alice: 2 task(s), 45 min total
+Bob: 1 task(s), 30 min total
+
+Tasks Sorted by Preferred Time
+========================================
+07:00 | Morning walk (Mochi)
+09:00 | Litter box cleaning (Biscuit)
+12:30 | Feeding (Mochi)
+18:00 | Evening walk (Mochi)
+
+Pending Tasks (filter by completion status)
+========================================
+Evening walk (Mochi)
+Morning walk (Mochi)
+Litter box cleaning (Biscuit)
+
+Mochi's Tasks (filter by pet name)
+========================================
+Evening walk | completed=False
+Morning walk | completed=False
+Feeding | completed=True
+
+Conflict Check
+========================================
+Warning: scheduling conflicts detected:
+  - 'Evening walk' (Mochi, Alice) overlaps 'Morning walk' (Mochi, Bob) [same pet]
+```
+
+Note the conflict warning at the bottom: Mochi's evening and morning walks were both assigned to the `08:00` slot across two different employees, which `check_conflicts()` correctly flags as a same-pet double-booking — exactly the scenario `build_schedule()`'s greedy, employee-only algorithm doesn't prevent on its own.
 
 **Screenshot or video** _(optional)_: <!-- Insert a screenshot or link to a demo video here -->

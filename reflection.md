@@ -54,8 +54,11 @@
 
 - in our build_schedule method, there is an inefficiency with how it handles the sorting of the schedule. It does a Swap for the next_available employee/available_time which is an O(mn) operation.
 - This is an acceptable trade off for now since the data we are working with is very small to the point where the app will not crash despite the greedy logic.
+- There is no timer alotted for pet availability, it only keeps track of whichever employee is available first.
 - Why is that tradeoff reasonable for this scenario?
   - I'm basing this off of efficiency of the workflow so that there is little to no conflict when it comes to forgetting to do a specific task. Having a priority/time sensitive ordered schedule will make sure that the most important tasks are done, then the menial task will be done last, with the cost of the menial task to be always done less (This will mean that if an owner were to come in with just 1 menial services to do for the dog, it will have to be done after all the priority tasks are done or if their pickup time is coming up.)
+
+  - As for the Employee First availability algorithm, I'm considering only for employee efficiency. Having the warning show up is sufficient enough for someone to manually resolve the scheduling conflict, also keeping in mind that the duration of the service is tentative. To stay in the scope of the project, re-evaluating the algorithm to consider for both pet and employee availability should be reconsidered in future iterations.
 
 ---
 
@@ -72,7 +75,9 @@
 **b. Judgment and verification**
 
 - Describe one moment where you did not accept an AI suggestion as-is.
+- I rejected the overall overhaul of the core functionality of the scheduler, specifically the automation start and end time for tasks. It suggested major changes to the overall design of the application where it changes important relations to Employee, Assignment, Task, and Schedule (Wanted to Introduce Pet Schedule)
 - How did you evaluate or verify what the AI suggested?
+- When it suggested that it make a completely separate class to introduce to my UML, I felt like it was too drastic of a change to go through with based on the scope of the project. I accepted it as a trade off and not an urgent change to address. It constantly wanted me to re-think the approach for the app to be further optimized with what it suggests to be the best behavior.
 
 ---
 
@@ -81,12 +86,20 @@
 **a. What you tested**
 
 - What behaviors did you test?
+  - Tests/Verification were mainly done running the streamlit app locally. Tested the usual flow of Add a Pet, task for the pet, the features in my Tasks table, specifically the filter by pet feature, and Build a Schedule (if the warning shows up for conflicting schedules). The tests in test_pawpal.py only covers a small portion of the functionality like updating a status of the task, making sure that adding a task automatically shows up in the task list, an assignment is automatically assigned. There are also the scheduling tests like making sure the warning text shows up if there is a conflicting task, and the filter task.
 - Why were these tests important?
+- These tests mainly cover the core features of the application. If the "happy path" doesn't work, then there needs some serious fixing with the application.
 
 **b. Confidence**
 
 - How confident are you that your scheduler works correctly?
+- 80%
 - What edge cases would you test next if you had more time?
+- There's the trade offs with the scheduler I mentioned before how it only takes into account employee availability and not pet availability
+- There needs to be more validation with the form, I.E empty fields should not be considered unless they are optional (preferred time)
+- Introduce Rate Limits to how many tasks can be added in a span of time (prevent spam)
+- Add a new feature to add employees, modify which employee is assigned to a pet and not auto assign them by default
+- Frequency is a little ambiguous, specifically since I only show the time of the task and not the date to do them on.
 
 ---
 
@@ -95,11 +108,18 @@
 **a. What went well**
 
 - What part of this project are you most satisfied with?
+- The planning the UML went really well in my opinion, I feel like I kept the parts that I thought to be important, while I used Claude as more of a consultant. The AI brought to my attention specific classes (Scheduler, Assignments) that I thought was imperative to add to me UML, while it also made me rethink my model to also include an Employees list to help keep track of which employee is assigned to which pet.
 
 **b. What you would improve**
 
 - If you had another iteration, what would you improve or redesign?
+- Pretty similar to what I wrote down in the testing/verification section:
+  - I feel there are still missing parts to the application where it is most focused on the actual Pet Scheduler, and not the overall business model (the feature to add employees should be addressed since it currently auto assigns them without the ability to modify)
+  - The app is very vulnerable where it is prone to error injections (since the only safety I have implemented is a warning disclaimer for scheduling)
+  - The scheduling logic to include pet availability so the warning disclaimer doesn't always show.
 
 **c. Key takeaway**
 
 - What is one important thing you learned about designing systems or working with AI on this project?
+- It becomes really easy to just constantly accept the changes/suggestions the AI gives you, but doing that introduces a lot of potential gaps in the logic. It's hard to revert something that is already implemented in the long run without it becoming a complete redesign of the application; it eats away at both your tokens, and your time. Just question everything that the model suggests, asking "why do this change", "why not do it this way", "are there other ways to fix this", goes a long way in making your logic simpler and easier to follow. Also I am now a fan of creating documentation if its as easy as prompting AI to give a 1 line description of my methods.
+- Separating my chat sessions felt a little negligible to be honest? If there were fixes I had to do in my backend logic after realizing some errors in the frontend, I feel like it would slowly build up that context it had before (since I'm attaching the same pawpal_system.py)? The same opinon vice versa.
